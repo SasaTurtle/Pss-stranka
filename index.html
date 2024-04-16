@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detekce a Rozpoznávání Obličejů</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            text-align: center;
+            font-size: 50px;
+            text-decoration: underline;
+        }
+        code {
+            display: block;
+            background-color: #f4f4f4;
+            padding: 10px;
+            overflow-x: auto;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .green{
+            color: green;
+        }
+
+        img{
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            width: 50%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Detekce a Rozpoznávání Obličejů</h1>
+
+    <h2>Python Kód</h2>
+    <p>Níže je Python kód pro detekci a rozpoznávání obličejů:</p>
+    <code>
+        <pre>
+            import os
+            import cv2
+            import torch
+            from facenet_pytorch import InceptionResnetV1, MTCNN
+            from tqdm import tqdm
+            from types import MethodType
+            
+            <div class="green">###Pomocna funkce pro enkodovani obrazku obliceje
+                def encode(img):</div> 
+                res = resnet(torch.Tensor(img)) # Enkodovani vstupniho obrazku obliceje pomoci InceptionResnetV1
+                return res
+            
+                <div class="green">### Metoda detekce obliceju a ohranicujici boxy</div>
+            def detect_box(self, img, save_path=None):
+               <div class="green">#Detekovani obliceju pomoci MTCNN</div>
+                batch_boxes, batch_probs, batch_points = self.detect(img, landmarks=True)
+                <div class="green"># Vybrani obliceju podle nekterych kriterii</div>
+                if not self.keep_all:
+                    batch_boxes, batch_probs, batch_points = self.select_boxes(
+                        batch_boxes, batch_probs, batch_points, img, method=self.selection_method
+                    )
+                <div class="green"># Extrahovani obliceju z obrazku (.jpg)</div>
+                faces = self.extract(img, batch_boxes, save_path)
+                return batch_boxes, faces
+            
+            
+            <div class="green">### Nacteni pred-nauceneho modelu</div>
+            resnet = InceptionResnetV1(pretrained='vggface2').eval()
+            mtcnn = MTCNN(
+              image_size=224, keep_all=True, thresholds=[0.7, 0.5, 0.5], min_face_size=60 ##Hodnoty ktere urcuji jak jemne bude hledani obliceje (cim mensi cislo tim sensitivnejsi)
+            )<div class="green">#Nacteni MTCNN modelu se specifikovanymi parametry</div>
+            mtcnn.detect_box = MethodType(detect_box, mtcnn) <div class="green"># Overriduje detect_box metodu MTCNN s custom metodou</div>
+            
+            <div class="green">###Slozka obsahujici ulozene obrazky lidi</div>
+            saved_pictures = "./saved/"
+            all_people_faces = {} <div class="green">#Dictionary, ktery uklada zakodovane iterace vsech obliceju</div>
+            
+            <div class="green">###For ktery prochazi ulozene obliceje a uklada je do dictionary</div>
+            for file in os.listdir(saved_pictures):
+                person_face, extension = file.split(".") <div class="green">#Dostane jmeno souboru (nazev cloveka)</div>
+                img = cv2.imread(f'{saved_pictures}/{person_face}.jpg')
+                cropped = mtcnn(img)<div class="green"> #Detekuje a zmensi obliceje pomoci MTCNN </div>
+                if cropped is not None:
+                    all_people_faces[person_face] = encode(cropped)[0, :] #Zakoduje zmenseny oblicej a ulozi jej do dictionary <div class="green"></div>
+                    
+            <div class="green">###Funkce ktera detekuje obliceje v live videu  </div>
+            def detect(cam=0, thres=0.8): <div class="green">#thres je taky cislo ktere urcuje toleranci mezi ulozenym obrazkem a framem z videa, cim vetsi cislo tim mensi tolerance a obracene</div> 
+                vdo = cv2.VideoCapture(cam) <div class="green">#Inicializace video zaberu</div> 
+                while vdo.grab():
+                    _, img0 = vdo.retrieve() <div class="green">#Precteni framu z live videa</div>
+                    batch_boxes, cropped_images = mtcnn.detect_box(img0) <div class="green">#Detekovani obliceje a zmenseni ze zaberu</div>
+            
+                    if cropped_images is not None:
+                        for box, cropped in zip(batch_boxes, cropped_images):
+                            x, y, x2, y2 = [int(x) for x in box] <div class="green"># Koordinace boxu, ktery se objevi kdyz je detekovan oblicej</div>
+                            img_embedding = encode(cropped.unsqueeze(0)) <div class="green"># Zakodovani zmenseneho obliceje</div>
+                            detect_dict = {}
+                            for k, v in all_people_faces.items():
+                                detect_dict[k] = (v - img_embedding).norm().item() <div class="green"># Zpocitani podobnosti se vsemi ostatnimi obliceji</div>
+                            min_key = min(detect_dict, key=detect_dict.get) <div class="green"># Najde obliceje s nejmensi vzdalenosti (nejpodobnejsiho)</div>
+            
+                            if detect_dict[min_key] >= thres: <div class="green"># Pokud je podobnost mensi nez nejake cislo tak ho oznaci jako 'Undetected'</div>
+                                min_key = 'Undetected'
+                            
+                            cv2.rectangle(img0, (x, y), (x2, y2), (0, 0, 255), 2) <div class="green"># Nakresleni boxu okolo obliceje</div>
+                            cv2.putText(
+                              img0, min_key, (x + 5, y + 10), 
+                               cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 255, 255), 1) <div class="green"># Vypsani textu detekovaneho cloveka</div>
+                            
+                               <div class="green">### Zobrazeni anotovaneho ramecku</div>
+                    cv2.imshow("output", img0)
+                    if cv2.waitKey(1) == ord('q'):
+                        cv2.destroyAllWindows()
+                        break
+                        <div class="green">### Hlavni funkce pro spusteni detekce obliceje a kodovani obliceju na videozaznamu</div>
+            if __name__ == "__main__":
+                detect(0) <div class="green"># Spustit detekci a kodovani obliceju na vychozim kamera kanalu</div>
+        </pre>
+    </code>
+
+    <h2>Vysvětlení</h2>
+    <p>Používáme MTCNN (Multi-Task Cascaded Convolutional Neural Network) pro detekci a ořezávání obličejů a InceptionResnetV1 pro kódování obličejů. Kód načítá předtrénované modely, kóduje obličeje a pak detekuje obličeje ve videu, klasifikuje je na základě předregistrovaných obličejů.</p>
+
+    <h2>Jak to funguje</h2>
+    <ol>
+        <li>Nastavení a import potřebných knihoven.</li>
+        <li>Definice pomocných funkcí pro kódování obličejů a přizpůsobení metod detekce.</li>
+        <li>Načtení předtrénovaných modelů pro detekci a kódování obličejů.</li>
+        <li>Kódování obličejů námi známých osob.</li>
+        <li>Definice funkcí pro detekci a klasifikaci obličejů.</li>
+        <li>Spuštění funkci detekce a klasifikace obličejů na výchozím záznamu kamery.</li>
+    </ol>
+
+    <h2>Závěr</h2>
+    <p>Tento Python program poskytuje rámec pro detekci a rozpoznávání obličejů v reálném čase pomocí předtrénovaných modelů machine learning.</p>
+
+    <img src="img/img.png">
+</body>
+</html>
