@@ -123,7 +123,7 @@
     </code>
 
     <h2>Vysvětlení</h2>
-    <p>Používáme MTCNN (Multi-Task Cascaded Convolutional Neural Network) pro detekci a ořezávání obličejů a InceptionResnetV1 pro kódování obličejů. Kód načítá předtrénované modely, kóduje obličeje a pak detekuje obličeje ve videu, klasifikuje je na základě předregistrovaných obličejů.</p>
+    <p>Používám MTCNN (Multi-Task Cascaded Convolutional Neural Network) pro detekci a ořezávání obličejů a InceptionResnetV1 pro kódování obličejů. Kód načítá předtrénované modely, kóduje obličeje a pak detekuje obličeje ve videu, klasifikuje je na základě předregistrovaných obličejů.</p>
 
     <h2>Jak to funguje</h2>
     <ol>
@@ -134,6 +134,12 @@
         <li>Definice funkcí pro detekci a klasifikaci obličejů.</li>
         <li>Spuštění funkci detekce a klasifikace obličejů na výchozím záznamu kamery.</li>
     </ol>
+
+    <h2>Jak spustit program?</h2>
+    <p>Program se dá jednoduše spustit v konzoli zadáním příkazu: <code>python main.py</code> ...musíte ale být ve stejné složce jako program. Program se vypne pomocí <bold>Ctrl + C</bold>.</p>
+
+    <h2>Kde se ukládají obrázky?</h2>
+    <p>Aby program z čeho měl analyzovat váš, nebo jiný obličej, tak fotky nahrávejte do složky <bold>"saved"</bold>. Zvolte takový název nahraného obrázku, který by jste chtěli aby se při nalezení schody zobrazil.</p>
 
     <h2>Závěr</h2>
     <p>Tento Python program poskytuje rámec pro detekci a rozpoznávání obličejů v reálném čase pomocí předtrénovaných modelů machine learning.</p>
